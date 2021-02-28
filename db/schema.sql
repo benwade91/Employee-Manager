@@ -19,6 +19,7 @@ CREATE TABLE roles (
   roles VARCHAR(30) NOT NULL,
   salary INTEGER,
   department_id INTEGER,
+  is_manager BOOLEAN NOT NULL,
   CONSTRAINT fk_department FOREIGN KEY (department_id) REFERENCES department(id)
 );
 
