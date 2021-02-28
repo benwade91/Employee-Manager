@@ -137,7 +137,6 @@ const addDept = function () {
                 function (err, ) {
                     if (err) throw err;
                     viewAllDept();
-                    initAction();
                 })
         })
 }
@@ -185,12 +184,10 @@ const addEmp = function () {
             } else {
                 mngrNum = null
             }
-            console.log(mngrNum);
             connection.query(`INSERT INTO employee(first_name, last_name, role_id, manager_id) VALUE ('${res.fName}', '${res.lName}', ${roleNum}, ${mngrNum})`,
                 function (err) {
                     if (err) throw err;
                     viewAllEmployees();
-                    initAction();
                 })
         })
 }
@@ -222,14 +219,11 @@ const addRole = function () {
             choices: depts
         }])
         .then(res => {
-            console.log(depts);
             let deptNum = (depts.indexOf(res.deptChoice) + 1);
-            console.log(res.roleName, res.salary, deptNum);
             connection.query(`INSERT INTO roles(roles, salary, department_id, is_manager) VALUE ('${res.roleName}', ${res.salary}, ${deptNum}, ${res.isMngr})`,
                 function (err, ) {
                     if (err) throw err;
                     viewAllRoles();
-                    initAction();
                 })
         })
 }
@@ -238,42 +232,43 @@ const removeEmp = function (employeeId) {
     connection.query(`DELETE FROM employee WHERE id = ${employeeId}`)
 }
 
-const updateRole = function(index){
+const updateRole = function (index) {
     let roles = [];
     connection.query('SELECT * FROM roles',
-    function (err,res){
-        if (err) throw err;
-        for (i = 0; i < res.length; i++) {
-            roles.push(res[i].id + ' ' + res[i].roles);
-        }
-        inquirer.prompt([{
-            type: 'list',
-            name: 'whatRole',
-            message: 'What should the employees new role be?',
-            choices: roles
-        }])
-        .then(resp => {
-            let roleIndex = roles.indexOf(resp.whatRole);
-            connection.query(`UPDATE employee SET role_id = ${res[roleIndex].id} WHERE id = ${index}`);
-            initAction();
+        function (err, res) {
+            if (err) throw err;
+            for (i = 0; i < res.length; i++) {
+                roles.push(res[i].id + ' ' + res[i].roles);
+            }
+            inquirer.prompt([{
+                    type: 'list',
+                    name: 'whatRole',
+                    message: 'What should the employees new role be?',
+                    choices: roles
+                }])
+                .then(resp => {
+                    let roleIndex = roles.indexOf(resp.whatRole);
+                    connection.query(`UPDATE employee SET role_id = ${res[roleIndex].id} WHERE id = ${index}`);
+                    initAction();
+                })
         })
-    })
 }
 
 const updateEmp = function () {
     let emps = [];
     let managers = [];
-
-    connection.query('SELECT employee.first_name, employee.last_name, roles.roles FROM employee JOIN roles ON employee.role_id = roles.id', function (err, res) {
+    let justWork;
+    connection.query('SELECT employee.id, employee.first_name, employee.last_name, roles.roles FROM employee JOIN roles ON employee.role_id = roles.id', function (err, res) {
         if (err) throw err;
+        justWork = res;
         for (i = 0; i < res.length; i++) {
-            emps.push(res[i].first_name + ' ' + res[i].last_name + ' ' + res[i].roles);
+            emps.push(res[i].id + ' ' + res[i].first_name + ' ' + res[i].last_name + ' ' + res[i].roles);
         }
     });
     connection.query('SELECT employee.id, employee.first_name, employee.last_name, roles.roles FROM employee JOIN roles ON employee.role_id = roles.id WHERE roles.is_manager = true', function (err, res) {
         if (err) throw err;
         for (i = 0; i < res.length; i++) {
-            managers.push(res[i].first_name + ' ' + res[i].last_name + ' ' + res[i].roles);
+            managers.push(res[i].id + ' ' + res[i].first_name + ' ' + res[i].last_name + ' ' + res[i].roles);
         }
     });
     inquirer.prompt([{
@@ -295,21 +290,21 @@ const updateEmp = function () {
                         message: 'Who would you like to UPDATE?',
                         choices: emps
                     }]).then(respo => {
-                        empIndex = emps.indexOf(respo.empChoice) + 1;
-                        removeEmp(empIndex);
+                        empIndex = emps.indexOf(respo.empChoice);
+                        removeEmp(justWork[empIndex].id);
                         addEmp();
                     })
                     break;
-                    case 'Employee role':
-                        inquirer.prompt([{
-                            type: 'list',
-                            name: 'empChoice',
-                            message: `Who's role would you like to UPDATE?`,
-                            choices: emps
-                        }]).then(respo => {
-                            empIndex = emps.indexOf(respo.empChoice) + 1;
-                            updateRole(empIndex);
-                        })
+                case 'Employee role':
+                    inquirer.prompt([{
+                        type: 'list',
+                        name: 'empChoice',
+                        message: `Who's role would you like to UPDATE?`,
+                        choices: emps
+                    }]).then(respo => {
+                        empIndex = emps.indexOf(respo.empChoice) + 1;
+                        updateRole(empIndex);
+                    })
                     break;
                 case 'Employees Manager':
                     inquirer.prompt([{
@@ -324,9 +319,9 @@ const updateEmp = function () {
                             choices: managers
                         }])
                         .then(res => {
-                            empIndex = emps.indexOf(res.empChoice) + 1;
-                            mngrIndex = emps.indexOf(res.mngrChoice) + 1;
-                            connection.query(`UPDATE employee SET manager_id = ${mngrIndex} WHERE id = ${empIndex}`);
+                            empIndex = emps.indexOf(res.empChoice);
+                            mngrIndex = emps.indexOf(res.mngrChoice);
+                            connection.query(`UPDATE employee SET manager_id = ${justWork[mngrIndex].id} WHERE id = ${justWork[empIndex].id}`);
                             initAction();
                         })
                     break;
@@ -337,12 +332,11 @@ const updateEmp = function () {
                         message: 'Who would you like to REMOVE?',
                         choices: emps
                     }]).then(res => {
-                        empIndex = emps.indexOf(res.empChoice) + 1;
-                        removeEmp(empIndex);
+                        empIndex = emps.indexOf(res.empChoice);
+                        removeEmp(justWork[empIndex].id);
                         initAction();
                     })
                     break;
             }
         })
 }
-
